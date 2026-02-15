@@ -9,11 +9,11 @@ library(dplyr)
 library(tidyr)
 
 # reading data in
-Delta <- read_excel("/home/ks/Documents/Main/Maynooth/MH201/EEG/restStateEEG/CTEEG022Y_Delta.xlsx")
-Alpha <- read_excel("/home/ks/Documents/Main/Maynooth/MH201/EEG/restStateEEG/CTEEG022Y_Alpha.xlsx")
-Beta <- read_excel("/home/ks/Documents/Main/Maynooth/MH201/EEG/restStateEEG/CTEEG022Y_Beta.xlsx")
-Gamma <- read_excel("/home/ks/Documents/Main/Maynooth/MH201/EEG/restStateEEG/CTEEG022Y_Gamma1.xlsx")
-Theta <- read_excel("/home/ks/Documents/Main/Maynooth/MH201/EEG/restStateEEG/CTEEG022Y_Theta.xlsx")
+Delta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx")
+Alpha <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx")
+Beta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx")
+Gamma <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Gamma1.xlsx")
+Theta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx")
 
 # bands 
 bands <- list(
