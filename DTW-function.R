@@ -8,12 +8,14 @@ library(proxy)
 library(dplyr)
 library(tidyr)
 
-# reading data in
+# reading data in (COMPUTER)
 Delta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx")
 Alpha <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx")
 Beta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx")
 Gamma <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Gamma1.xlsx")
 Theta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx")
+
+
 
 # bands 
 bands <- list(
