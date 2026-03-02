@@ -161,3 +161,4 @@ theta_results <- theta_long %>%
     smoothed_power = map2(model, data, ~ predict(.x, .y))
   ) %>%
   unnest(cols = c(data, smoothed_power))
+
