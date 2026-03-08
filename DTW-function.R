@@ -8,7 +8,7 @@ library(proxy)
 library(dplyr)
 library(tidyr)
 
-# reading data in (COMPUTER)
+# reading data in (laptop)
 Delta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx")
 Alpha <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx")
 Beta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx")

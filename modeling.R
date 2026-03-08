@@ -35,9 +35,10 @@ ggplot(df_alpha, aes(x = Time)) +
 
 # Generalized Additive model
 # k = 20 is the "basis dimension" - higher means more "wiggly"
-gam_model <- gam(Fp1 ~ s(Time, k = 20), data = df_alpha)
+gam_model <- gam(Fp1 ~ s(Time, k = 40), data = df_alpha) ## 40 looks kinda better for me 
 
 summary(gam_model)
+
 
 df_alpha$gam_preds <- predict(gam_model, df_alpha)
 
@@ -48,7 +49,7 @@ ggplot(df_alpha, aes(x = Time, y = Fp1)) +
   labs(title = "GAM Fit for Alpha Band (Fp1)")
 
 
-# Running GAM on smoothed eeg across all nodes and wavelength -------------
+# GAM ACROSS ALL ----------------------------------------------------------
 library(tidyverse)
 library(mgcv)
 
@@ -70,7 +71,7 @@ alpha_long_raw <- bands_clean$alpha %>%
   )
 
 # GAM computation for all channels across wavelength
-alpha_results <- alpha_long_raw %>%
+alpha_results <- alpha_long %>%
   group_by(Channel) %>%
   nest() %>%
   mutate(
@@ -107,6 +108,16 @@ beta_results <- beta_long %>%
     smoothed_power = map2(model, data, ~ predict(.x, .y))
   ) %>%
   unnest(cols = c(data, smoothed_power))
+
+## Beta Visualization
+beta_results %>%
+  filter(Channel %in% c("Fp1", "Fp2", "O1", "O2")) %>%
+  ggplot(aes(x = Time)) + 
+  geom_line(aes(y = Power), alpha = 0.2) + # raw noise
+  geom_line(aes(y = smoothed_power), col = "blue", size = 1) + # Gam
+  facet_wrap(~Channel) + 
+  theme_minimal()
+  labs(Title = "Beta Band: raw vs Gam smoothing")
 
 ## delta GAM computation
 delta_long <- bands_norm$delta %>% 
