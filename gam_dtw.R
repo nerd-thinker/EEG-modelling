@@ -83,5 +83,75 @@ cat("delta done\n")
 gamma_channel_mat <- compute_channel_dtw(gamma_lookup_ds)
 cat("gamma done\n")
 
-# boxplot TIME -----
-boxplot(theta_channel_mat)
+## boxplot time
+#### COMMENT: THE SEQUENCE OF NODE IS NOT CORRECT NEED TO FIX IT
+boxplot(alpha_channel_mat, main = "Alpha gam's dtw distances")
+boxplot(beta_channel_mat, main = "Betta gam's dtw distances")
+boxplot(delta_channel_mat, main = "Delta gam's dtw distances")
+boxplot(gamma_channel_mat, main = "Gamma gam's dtw distances")
+boxplot(theta_channel_mat, main = "Theta gam's dtw distances")
+
+
+# 5x5 matrices ---
+wave_lookups <- list(
+  theta = theta_lookup_ds,
+  alpha = alpha_lookup_ds,
+  beta  = beta_lookup_ds,
+  delta = delta_lookup_ds,
+  gamma = gamma_lookup_ds
+)
+
+compute_wave_dtw <- function(channel_name, wave_lookups) {
+  wave_names <- names(wave_lookups)
+  n <- length(wave_names)
+  mat <- matrix(0, n, n, dimnames = list(wave_names, wave_names))
+  
+  # Extract this channel's time series from each wave
+  ts_list <- lapply(wave_lookups, function(lookup) {
+    idx <- which(lookup$Channel == channel_name)
+    lookup$smoothed_power[[idx]]
+  })
+  
+  for (i in 1:(n-1)) {
+    for (j in (i+1):n) {
+      d <- dtw(ts_list[[i]], ts_list[[j]],
+               distance.only = TRUE)$normalizedDistance
+      mat[i, j] <- d
+      mat[j, i] <- d
+    }
+  }
+  mat
+}
+
+# Run for all 32 channels
+all_channels <- theta_lookup_ds$Channel
+
+wave_dtw_matrices <- lapply(
+  setNames(all_channels, all_channels),
+  compute_wave_dtw,
+  wave_lookups = wave_lookups
+)
+
+cat("All 5x5 matrices done\n")
+
+# Should be a 5x5 symmetric matrix with 0 diagonal
+wave_dtw_matrices[["Fp1"]]
+isSymmetric(wave_dtw_matrices[["Fp1"]])  # TRUE
+
+# Combine all channels into one long data frame
+wave_long <- lapply(all_channels, function(ch) {
+  wave_dtw_matrices[[ch]] %>%
+    as.data.frame() %>%
+    rownames_to_column("Wave_1") %>%
+    pivot_longer(-Wave_1, names_to = "Wave_2", values_to = "DTW_distance") %>%
+    filter(Wave_1 != Wave_2) %>%
+    mutate(Channel = ch)
+}) %>% bind_rows()
+
+# Boxplot: distribution of wave-to-wave DTW per channel
+ggplot(wave_long, aes(x = Channel, y = DTW_distance)) +
+  geom_boxplot(fill = "coral", alpha = 0.7, outlier.size = 0.8) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Wave DTW Distances per Channel (5x5)",
+       x = "Channel", y = "Normalised DTW Distance")
