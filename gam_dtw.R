@@ -83,7 +83,7 @@ cat("delta done\n")
 gamma_channel_mat <- compute_channel_dtw(gamma_lookup_ds)
 cat("gamma done\n")
 
-## boxplot time
+# boxplot time --------
 #### COMMENT: THE SEQUENCE OF NODE IS NOT CORRECT NEED TO FIX IT
 boxplot(alpha_channel_mat, main = "Alpha gam's dtw distances")
 boxplot(beta_channel_mat, main = "Betta gam's dtw distances")
@@ -135,7 +135,8 @@ wave_dtw_matrices <- lapply(
 cat("All 5x5 matrices done\n")
 
 # Should be a 5x5 symmetric matrix with 0 diagonal
-wave_dtw_matrices[["Fp1"]]
+x <-wave_dtw_matrices[["Fp1"]]
+boxplot(x)
 isSymmetric(wave_dtw_matrices[["Fp1"]])  # TRUE
 
 # Combine all channels into one long data frame
