@@ -1,3 +1,4 @@
+
 library(dtw)
 library(ggplot2)
 # Lookup table for each wave ----
@@ -156,3 +157,7 @@ ggplot(wave_long, aes(x = Channel, y = DTW_distance)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Wave DTW Distances per Channel (5x5)",
        x = "Channel", y = "Normalised DTW Distance")
+
+# Test on theta first — this will take a few minutes
+theta_channel_mat <- compute_channel_dtw(theta_lookup)
+
