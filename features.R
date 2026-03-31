@@ -1,9 +1,22 @@
-## my experimentation got deleted unfortunetly, how sad
-
-# feature function -------------
 library(dplyr)
 library(tidyr)
 library(mgcv)
+
+## my experimentation got deleted unfortunetly, how sad
+x <- bands_clean$alpha$Fp1
+
+plot(x, type = "l", col = "blue")
+model <- gam(x~ s(Time, k= 60), data = bands_clean$alpha)
+prediction <- predict(model)
+lines(prediction, col = "red", lwd = 2)
+
+epochs <- seq(from =0, to = length(x), by = 200) ## 200 seems good enough to determine if the gam function is increasing or decreasing
+abline(v=epochs)
+
+# feature function -------------
+library(pracma)  # has hjorth() function
+
+#epochs no can change if you want more defined information during smaller interval
 
 time_domain_features <- function(band_df, epochs = 200) { ## maybe add k factor for gams
   
@@ -52,6 +65,20 @@ time_domain_features <- function(band_df, epochs = 200) { ## maybe add k factor 
       max_power   = max(smooth, na.rm = TRUE),
       min_power   = min(smooth, na.rm = TRUE),
       range_power = max_power - min_power,
+      .groups = "drop"
+    )
+  df %>%
+    mutate(epoch = cut(Time, breaks = epoch_breaks, labels = FALSE)) %>%
+    group_by(Channel, epoch) %>%
+    summarise(
+      # Raw Hjorth
+      raw_activity   = hjorth(Power)$activity,
+      raw_mobility   = hjorth(Power)$mobility,
+      raw_complexity = hjorth(Power)$complexity,
+      # Smoothed Hjorth
+      smooth_activity   = hjorth(smoothed_power)$activity,
+      smooth_mobility   = hjorth(smoothed_power)$mobility,
+      smooth_complexity = hjorth(smoothed_power)$complexity,
       .groups = "drop"
     )
   
