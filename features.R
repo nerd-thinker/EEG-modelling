@@ -2,7 +2,7 @@ library(dplyr)
 library(tidyr)
 library(mgcv)
 
-## my experimentation got deleted unfortunetly, how sad
+## my experimentation with epochs: 
 x <- bands_clean$alpha$Fp1
 
 plot(x, type = "l", col = "blue")
@@ -16,7 +16,6 @@ abline(v=epochs)
 # feature function ------------
 
 #epochs no can change if you want more defined information during smaller interval
-library(pracma) #library for hjorth parameter estimates
 
 time_domain_features <- function(band_df, epochs = 200, k = 60) {
   
@@ -76,3 +75,44 @@ time_domain_features <- function(band_df, epochs = 200, k = 60) {
   
   return(list(raw = features_raw, smooth = features_smooth))
 }
+# Define Hjorth parameters from scratch
+hjorth <- function(x) {
+  x <- na.omit(x)
+  
+  dx  <- diff(x)        # first derivative
+  ddx <- diff(dx)       # second derivative
+  
+  activity   <- var(x)
+  mobility   <- sqrt(var(dx) / var(x)) ## estimate of the mean frequency
+  complexity <- (sqrt(var(ddx) / var(dx))) / mobility ## estimate of the bandwidth of the signal, which indicates the similarity of the shape of the signal to a pure sine wave
+  
+  list(activity = activity, mobility = mobility, complexity = complexity)
+}
+
+# Test it
+test <- c(1.2, 1.5, 1.3, 1.8, 1.1, 1.6)
+hjorth(test)
+
+## Compute the basic features for separate wavelengths
+alpha_basic_features <- time_domain_features(bands_clean$alpha)
+beta_basic_features <- time_domain_features(bands_clean$beta)
+delta_basic_fetures <- time_domain_features(bands_celan$delta)
+theta_basic_features <- time_domain_features(bands_clean$theta)
+gamma_basic_features <- time_domain_features(bands_clean$gamma)
+#for all:
+wave_features <- lapply(bands_clean, time_domain_features)
+
+## compare results:
+alpha_basic_features$raw %>%
+  
+alpha_basic_features$smooth
+
+
+### hjorth parameters interpretation
+hjorth(bands_clean$alpha$Fp1)
+hjorth(bands_norm$alpha$Fp1) ##be careful when using normalized as activity = 1 (var of whole time-series)
+
+##gamma should have higher mobility than alpha:
+hjorth(bands_clean$gamma$Fp1) ##mobility: 0.151 > 0.043 as expected
+
+
