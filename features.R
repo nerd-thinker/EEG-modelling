@@ -12,7 +12,7 @@ lines(prediction, col = "red", lwd = 2)
 
 epochs <- seq(from =0, to = length(x), by = 200) ## 200 seems good enough to determine if the gam function is increasing or decreasing
 abline(v=epochs)
-
+## Question: is there a 
 # feature function ------------
 
 #epochs no can change if you want more defined information during smaller interval
@@ -42,6 +42,8 @@ time_domain_features <- function(band_df, epochs = 200, k = 60) {
     ungroup()
   
   # Raw features + Hjorth
+  
+  
   features_raw <- long_df %>%
     group_by(channel, epoch) %>%
     summarise(
