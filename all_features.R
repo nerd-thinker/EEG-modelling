@@ -3,6 +3,7 @@ library(pracma)
 library(dplyr)
 library(tidyr)
 library(mgcv)
+library(moments)
 
 # combined function for all
 get_features <- function(x,
@@ -67,9 +68,11 @@ get_features <- function(x,
   return(c(
     # General smooth features
     "mean"                    = mean(smooth_x),
-    "var"                     = var(smooth_x),
+    #"var"                     = var(smooth_x),
     "q25"                     = unname(quantile(smooth_x, .25)),
     "q75"                     = unname(quantile(smooth_x, .75)),
+    "skewdness"               = moments::skewness(smooth_x),
+    "kurtosis"                = moments::kurtosis(smooth_x),
     
     # Peak features
     "n_peaks"                 = num_peaks,
@@ -81,7 +84,7 @@ get_features <- function(x,
     "sd_inter_peak_interval"  = sd_ipi,
     
     # Hjorth
-    "activity"                = hjorth(smooth_x)$activity,
+    "activity"                = hjorth(smooth_x)$activity, ##same as variance
     "mobility"                = hjorth(smooth_x)$mobility,
     "complexity"              = hjorth(smooth_x)$complexity
   ))
@@ -106,3 +109,5 @@ get_features(node,time = time, normalisation = "z_score")
 get_features(node,time = time, normalisation = "01")
 get_features(node, normalisation = "none")
 
+smooth_ds <- node[seq(1,length(node), by = 8)]
+pracma::sample_entropy(smooth_ds, edim = 2, r = 0.2 * sd(smooth_ds))
