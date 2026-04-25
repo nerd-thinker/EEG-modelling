@@ -91,6 +91,7 @@ get_features <- function(x,
     "complexity"              = hjorth(smooth_x)$complexity
   ))
 }
+# Helper functions -------------
 hjorth <- function(x) {
   x <- na.omit(x)
   
@@ -104,13 +105,25 @@ hjorth <- function(x) {
   list(activity = activity, mobility = mobility, complexity = complexity)
 }
 
-# Test the functions
+skewness <- function(x) mean(((x - mean(x)) / sd(x))^3)
+kurtosis <- function(x) mean(((x - mean(x)) / sd(x))^4)
+band_power <- function(x) sum(x^2) / length(x)
+
+spectral_entropy <- function(x) {
+  spec <- abs(fft(x))^2
+  spec <- spec / sum(spec)
+  spec <- spec[spec > 0]
+  -sum(spec * log(spec))
+}
+
+# Test the functions --------------
 node <- bands_clean$alpha$FC5
 time <- bands_clean$alpha$Time
-get_features(node,time = time, normalisation = "z_score", k= 60)
-get_features(node,time = time, normalisation = "01")
+get_features(node,time = time, scaling = "z_score", k= 60,plot = F)
+get_features(node,time = time, scaling = "01")
 get_features(node, normalisation = "none")
 
-# entropy test
+# entropy test 
 smooth_ds <- node[seq(1,length(node), by = 8)] # reduce data
-pracma::sample_entropy(smooth_ds, edim = 2, r = 0.2 * sd(smooth_ds)) #entropy
+pracma::sample_entropy(node, edim = 2, r = 0.2 * sd(node)) 
+#entropy is not inlcuded as is tend to correlate with hjorth complexity measure and it takes wayy to long to compute
