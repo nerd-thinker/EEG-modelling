@@ -8,13 +8,14 @@ library(moments)
 # combined function for all
 get_features <- function(x,
                          time = NULL,
-                         normalisation = c("none","z_score","01"),
-                         k = 20) {
+                         scaling = c("none","z_score","01"),
+                         k = 20,
+                         plot = FALSE) {
   if(is.null(time)){ 
     time <- seq_along(x)
   } ## time needs to be provided as real time in seconds node$Time != sample indices (1:length(x))
-  normalisation <- match.arg(normalisation)
-  norm_x <- switch(normalisation,
+  scaling <- match.arg(scaling)
+  norm_x <- switch(scaling,
                    "none" = x,
                    "z_score" = as.numeric(scale(x)),
                    "01" = if (max(x) == min(x)) {   ## catching division by 0
@@ -57,14 +58,15 @@ get_features <- function(x,
   }
   
   # Plot
-  plot(time, norm_x, type = "l",
-       xlab = "Time", ylab = "Signal",
-       col = "grey87")                              # raw signal in grey
-  lines(time, smooth_x, col = 2, lwd = 2)   # GAM smooth in red
-  
-  if (length(peak_indices) > 0)
-    abline(v = time[peak_indices], lty = 2, col = "grey20")
-  
+  if(plot == TRUE){
+    plot(time, norm_x, type = "l",
+         xlab = "Time", ylab = "Signal",
+         col = "grey87")                              # raw signal in grey
+    lines(time, smooth_x, col = 2, lwd = 2)   # GAM smooth in red
+    
+    if (length(peak_indices) > 0)
+      abline(v = time[peak_indices], lty = 2, col = "grey20")
+  }
   return(c(
     # General smooth features
     "mean"                    = mean(smooth_x),
@@ -103,11 +105,12 @@ hjorth <- function(x) {
 }
 
 # Test the functions
-node <- bands_norm$alpha$FC5
-time <- bands_norm$alpha$Time
-get_features(node,time = time, normalisation = "z_score")
+node <- bands_clean$alpha$FC5
+time <- bands_clean$alpha$Time
+get_features(node,time = time, normalisation = "z_score", k= 60)
 get_features(node,time = time, normalisation = "01")
 get_features(node, normalisation = "none")
 
-smooth_ds <- node[seq(1,length(node), by = 8)]
-pracma::sample_entropy(smooth_ds, edim = 2, r = 0.2 * sd(smooth_ds))
+# entropy test
+smooth_ds <- node[seq(1,length(node), by = 8)] # reduce data
+pracma::sample_entropy(smooth_ds, edim = 2, r = 0.2 * sd(smooth_ds)) #entropy
