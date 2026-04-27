@@ -4,13 +4,7 @@ library(mgcv)
 library(pracma)
 library(tidyverse)
 library(dplyr)
-#library(moments) # for skewdness and kurtosis (not essential)
-# Data -----------
-Delta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx")
-Alpha <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx")
-Beta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx")
-Gamma <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Gamma1.xlsx")
-Theta <- read_excel("/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx")
+
 # Helper functions -------------
 hjorth <- function(x) {
   x <- na.omit(x)
@@ -111,6 +105,8 @@ get_features <- function(x,
   peak_psd  <- which.max(spec)
   mean_psd  <- mean(spec)
   
+  h <- hjorth(smooth_x)
+  
   c(
     # General smooth features
     "mean"                    = mean(smooth_x),
@@ -129,7 +125,6 @@ get_features <- function(x,
     "sd_inter_peak_interval"  = sd_ipi,
     
     # Hjorth
-    h <- hjorth(smooth_x),
     "activity"                = h$activity, ##same as variance
     "mobility"                = h$mobility,
     "complexity"              = h$complexity,
@@ -144,72 +139,71 @@ get_features <- function(x,
     "mean_psd"                = mean_psd
   )
 }
+
+
+
+
+
 # MASTER FUNCTION -------------------
 ## Data assumptions: 
 ## data is wide type, data has columns: Time, Fp1, other nodes, Time starts at 0
-extract_all_features <- function(filepath,
-                                 bands        = c("alpha", "beta","delta","theta","gamma"),
-                                 sheet_names = NULL, # if sheet names differ from band names
-                                 scaling     = "z_score",
-                                 k           = 20){
-  # 1. Read all sheets
-  message("Reading Excel sheets ...")
+extract_all_features <- function(filepaths,
+                                 scaling = "z_score",
+                                 k       = 20) {
   
-  # allowing custom sheet names if they differ from band names
-  sheets <- if(!is.null(sheet_names)) sheet_names else bands
+  bands <- names(filepaths)  # band names come from the named vector
   
-  band_data <- lapply(setNames(sheet, bands), function(s){
-    read_excel(filepath, sheet = s)
+  # Step 1: Read all files
+  message("Reading Excel files...")
+  band_data <- lapply(setNames(filepaths, bands), function(fp) {
+    read_excel(fp)
   })
   
-  # Extract time from first sheet, get channel names (everything except Time)
+  # Extract time and channels from first file
   time_vec <- band_data[[1]]$Time
   channels <- setdiff(colnames(band_data[[1]]), "Time")
   
-  message("Found %d channels across %d bands", length(channels), length(bands))
+  message(sprintf("Found %d channels across %d bands", length(channels), length(bands)))
   
-  # 2. Per-channel per-band features
-  message("Extracting features per channel per band ...")
+  # Step 2: Per-channel per-band features
+  message("Extracting features per channel per band...")
   
-  per_band <- lapply(setNames(bands, bands), function(b){
+  per_band <- lapply(setNames(bands, bands), function(b) {
     band_df <- band_data[[b]]
     
-    result <- sapply(channels, function(ch){
+    result <- sapply(channels, function(ch) {
       x <- as.numeric(band_df[[ch]])
       tryCatch(
         get_features(x,
                      time    = time_vec,
                      scaling = scaling,
                      k       = k,
-                     plot    = F),
-        error = function(e){
-          message(sprintf(" Failed: band = %s, channel = %s -%s", b, ch, e$message))
+                     plot    = FALSE),
+        error = function(e) {
+          message(sprintf("  Failed: band = %s, channel = %s — %s", b, ch, e$message))
           rep(NA, 20)
         }
       )
     })
     
-    #tranpose to channel x features
     as.data.frame(t(result)) %>%
-      mutate(channel = channel, band = b) %>%
-      relocate(band, channel) # put band and channel first
+      mutate(channel = channels, band = b) %>%
+      relocate(band, channel)
   })
   
-  # 3. Cross-band features
-  message("Computing cross-band features ...")
+  # Step 3: Cross-band features
+  message("Computing cross-band features...")
   
-  abs_powers <- sapply(setNames(bands, bands), function(b){
-    sapply(channels, function(ch){
+  abs_powers <- sapply(setNames(bands, bands), function(b) {
+    sapply(channels, function(ch) {
       band_power(as.numeric(band_data[[b]][[ch]]))
     })
   })
   
-  # Relative band power
-  total_power <- rowSum(abs_powers)
-  rel_power <- abs_powers / total_power
+  total_power <- rowSums(abs_powers)
+  rel_powers  <- abs_powers / total_power
   colnames(rel_powers) <- paste0("rel_power_", bands)
   
-  # Band power ratios
   power_ratios <- data.frame(
     ratio_theta_alpha = abs_powers[, "theta"] / abs_powers[, "alpha"],
     ratio_alpha_beta  = abs_powers[, "alpha"] / abs_powers[, "beta"],
@@ -217,18 +211,23 @@ extract_all_features <- function(filepath,
     ratio_theta_beta  = abs_powers[, "theta"] / abs_powers[, "beta"],
     ratio_stress      = (abs_powers[, "alpha"] + abs_powers[, "theta"]) / abs_powers[, "beta"]
   )
-  # Peak PSD frequency per band per channel
+  
   peak_psd_by_band <- sapply(setNames(bands, bands), function(b) {
     sapply(channels, function(ch) {
       x    <- as.numeric(band_data[[b]][[ch]])
-      spec <- abs(fft(x))^2 / length(x)
-      spec <- spec[1:(length(spec) / 2)]
-      which.max(spec)
+      # Gam smoothing
+      time <- seq_along(x)
+      fit  <- gam(x ~ s(time, k=k))
+      sx   <- as.numeric(predict(fit))
+      
+      # PSD - skip bin 1(DC component)
+      spec <- abs(fft(sx))^2 / length(sx)
+      spec <- spec[2:(length(spec) / 2)] ##start from bin 2  
+      which.max(spec) + 1                ##index correction
     })
   })
   colnames(peak_psd_by_band) <- paste0("peak_psd_", bands)
   
-  # Combine all cross-band features
   cross_band <- as.data.frame(cbind(rel_powers, power_ratios, peak_psd_by_band)) %>%
     mutate(channel = channels) %>%
     relocate(channel)
@@ -236,29 +235,37 @@ extract_all_features <- function(filepath,
   message("Done!")
   
   list(
-    per_band   = per_band,    # named list of 5 data frames (channels x features)
-    cross_band = cross_band   # one data frame (channels x cross-band features)
+    per_band   = per_band,
+    cross_band = cross_band
   )
 }
 
-
-## How to use it
+# Run it
+# Step 1: name your filepaths by band
+filepaths <- c(
+  alpha = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx",
+  beta  = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx",
+  gamma = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Gamma1.xlsx", 
+  delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
+  theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
+)
 results <- extract_all_features(
-  filepath    = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx",
-  bands       = c("theta", "alpha", "beta", "delta", "gamma"),
-  sheet_names = NULL,   # if your sheet names match band names exactly
-  scaling     = "z_score",
-  k           = 20
+  filepaths = filepaths,
+  scaling   = "z_score",
+  k         = 20
 )
 
-# Access results
+# Results -----------------
 results$per_band$alpha    # alpha band — channels x features data frame
 results$cross_band         # cross-band features — channels x features data frame
 
 # Combine all bands into one long data frame
 all_features <- bind_rows(results$per_band)
 
+# Possible problems --------------
 
+# Next steps -----------
+## a bit too many features so will need to run dimentionality reduction algorithms (eg. PCA - principal component analysis)
 
 
 
