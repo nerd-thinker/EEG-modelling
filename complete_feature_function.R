@@ -3,7 +3,7 @@ library(readxl)
 library(mgcv)
 library(pracma)
 library(tidyverse)
-library(dplyr)
+# library(dplyr)
 
 # Helper functions -------------
 hjorth <- function(x) {
@@ -150,7 +150,7 @@ get_features <- function(x,
 extract_all_features <- function(filepaths,
                                  scaling = "z_score",
                                  k       = 20) {
-  
+  start_total <- proc.time()
   bands <- names(filepaths)  # band names come from the named vector
   
   # Step 1: Read all files
@@ -169,6 +169,7 @@ extract_all_features <- function(filepaths,
   message("Extracting features per channel per band...")
   
   per_band <- lapply(setNames(bands, bands), function(b) {
+    
     band_df <- band_data[[b]]
     
     result <- sapply(channels, function(ch) {
@@ -232,12 +233,10 @@ extract_all_features <- function(filepaths,
     mutate(channel = channels) %>%
     relocate(channel)
   
-  message("Done!")
+  total_time <- proc.time() -start_total
+  message(sprintf("\nDone! Total time: %.1f seconds (%.1f minutes)", total_time["elapsed"], total_time["elapsed"]/60))
   
-  list(
-    per_band   = per_band,
-    cross_band = cross_band
-  )
+  list(per_band   = per_band, cross_band = cross_band)
 }
 
 # Run it
