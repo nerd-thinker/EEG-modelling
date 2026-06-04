@@ -268,5 +268,5 @@ all_features <- bind_rows(results$per_band)
 
 
 
-
+plot(my_data$)
 
