@@ -162,9 +162,14 @@ extract_all_features <- function(filepaths,
   message("Reading files...")
   bands     <- names(filepaths)
   band_data <- lapply(setNames(filepaths, bands), function(path) {
-    if (grepl("\\.xlsx?$", path, ignore.case = TRUE)) read_excel(path)
-    else if (grepl("\\.csv$", path, ignore.case = TRUE)) read_csv(path, show_col_types = FALSE)
+    df <- if (grepl("\\.xlsx?$", path, ignore.case = TRUE)) read_excel(path)
+    else if (grepl("\\.csv$", path, ignore.case = TRUE)) {
+      read_csv(path, show_col_types = FALSE)
+    }
     else stop("Unsupported file type: ", path)
+    
+    # Drop phantom columns created by a trailing comma in the header row
+    df[ , !grepl("^\\.\\.\\.\\d+$", colnames(df)), drop = FALSE]
   })
   
   time_vec <- band_data[[1]]$Time
