@@ -272,16 +272,16 @@ filepaths <- c(
 )
 # "raw_data/SPUR EEG data/001Y_Alpha.csv"
 filepaths <- c(
-  alpha = "~/eeg/raw_data/SPUR EEG data/001Y_Alpha.csv",
-  beta  = "~/eeg/raw_data/SPUR EEG data/001Y_Beta.csv",
-  gamma = "~/eeg/raw_data/SPUR EEG data/001Y_Delta.csv",
-  delta = "~/eeg/raw_data/SPUR EEG data/001Y_Gamma1.csv",
-  theta = "~/eeg/raw_data/SPUR EEG data/001Y_Theta.csv"
+  alpha = "~/eeg/raw_data/SPUR EEG data/012O_Alpha.csv",
+  beta  = "~/eeg/raw_data/SPUR EEG data/012O_Beta.csv",
+  gamma = "~/eeg/raw_data/SPUR EEG data/012O_Delta.csv",
+  delta = "~/eeg/raw_data/SPUR EEG data/012O_Gamma.csv",
+  theta = "~/eeg/raw_data/SPUR EEG data/012O_Theta.csv"
 )
 
 participant_row <- extract_all_features(
   filepaths      = filepaths,
-  participant_id = "001Y",
+  participant_id = "012O",
   k              = 70
 )
 
@@ -323,11 +323,11 @@ lapply(participant_row, function(x) {
 }) %>% unlist
 
 # NA troubleshooting ------------------
-which(any(is.na(participant_row)), arr.ind = T)
+which(any(is.na(participant_row_2)), arr.ind = T)
 any(is.na(participant_row))
 
 # Find which columns are NA
-na_cols <- names(participant_row)[is.na(participant_row)]
+na_cols <- names(participant_row_2)[is.na(participant_row_2)]
 data.frame(na_columns = na_cols) ## all of the inter_peak_interals
 
 # How many NAs total?
