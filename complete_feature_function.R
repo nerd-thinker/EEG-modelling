@@ -248,10 +248,19 @@ filepaths <- c(
   delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
   theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
 )
+
+## computer
+filepaths <- c(
+  alpha = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx",
+  beta  = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx",
+  gamma = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Gamma1.xlsx", 
+  delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
+  theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
+)
 results <- extract_all_features(
   filepaths = filepaths,
   scaling   = "z_score",
-  k         = 20
+  k         = 70
 )
 
 # Results -----------------
@@ -268,5 +277,5 @@ all_features <- bind_rows(results$per_band)
 
 
 
-plot(my_data$)
+
 
