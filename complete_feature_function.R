@@ -249,6 +249,7 @@ filepaths <- c(
   theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
 )
 
+
 ## computer
 filepaths <- c(
   alpha = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx",
@@ -257,6 +258,8 @@ filepaths <- c(
   delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
   theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
 )
+
+
 results <- extract_all_features(
   filepaths = filepaths,
   scaling   = "z_score",
@@ -274,6 +277,8 @@ all_features <- bind_rows(results$per_band)
 
 # Next steps -----------
 ## a bit too many features so will need to run dimentionality reduction algorithms (eg. PCA - principal component analysis)
+
+
 
 
 

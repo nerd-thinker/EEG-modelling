@@ -2,10 +2,9 @@
 .Rhistory
 .RData
 .Ruserdata
-.RDataTmp
+.RDataTmp*
 .RData
 .Rhistory
-.RDataTmp1
-.RDataTmp1
 .RData
 .Rhistory
+.positai
