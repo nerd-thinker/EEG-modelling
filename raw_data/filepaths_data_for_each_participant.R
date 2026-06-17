@@ -1,7 +1,7 @@
 base_dir <- "~/eeg/raw_data/SPUR-EEG-data"
 
-
 # Participant: 001Y  (no Alpha file)
+# time vector present, nodes present
 filepaths_001Y <- c(
   beta  = file.path(base_dir, "001Y_Beta.csv"),
   delta = file.path(base_dir, "001Y_Delta.csv"),
