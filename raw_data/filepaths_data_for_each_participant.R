@@ -1,4 +1,5 @@
-base_dir <- "~/eeg/raw_data/SPUR EEG data"
+base_dir <- "~/eeg/raw_data/SPUR-EEG-data"
+
 
 # Participant: 001Y  (no Alpha file)
 filepaths_001Y <- c(
