@@ -11,14 +11,11 @@
 # If you leave this NULL, the function falls back to "whichever axis has the
 # most non-numeric, non-time-like labels" instead of checking exact names.
 expected_nodes <- c(
-  "Fp1","Fp2","F7","F3","Fz","F4","F8",
-  "FC5","FC1","FC2","FC6",
-  "T7","C3","Cz","C4","T8",
-  "CP5","CP1","CP2","CP6",
-  "P7","P3","Pz","P4","P8",
-  "PO9","O1","Oz","O2","PO10",
-  "AF3","AF4"
-)  # <-- replace with your real 32 node names if different
+  "Fp1","AF3","F7","F3","FC1","FC5","T7","C3","CP1","CP5",
+  "P7","P3","Pz","PO3","O1","Oz","O2","PO4","P4","P8",
+  "CP6","CP2","C4","T8","FC6","FC2","F4","F8","AF4","Fp2",
+  "Fz","Cz"
+)  # <-- matches the 32-channel montage detected from your files
 
 time_keywords <- c("time", "t", "timestamp", "sec", "secs", "seconds", "ms")
 
@@ -39,10 +36,15 @@ time_keywords <- c("time", "t", "timestamp", "sec", "secs", "seconds", "ms")
 #' @param sampling_rate Hz, used ONLY if no time info exists at all in the file
 #' @param positive_offset_policy "shift" (default) shifts the whole time vector
 #'   up so the minimum becomes positive; "error" leaves it and just flags it invalid
+#' @param time_offset If given, this exact value is added to the time vector
+#'   instead of computing a file-specific shift. Use this to apply ONE consistent
+#'   offset across every file in a dataset (see process_eeg_folder), so that
+#'   "shifted time" still means the same real moment across participants/waves.
 check_and_fix_eeg <- function(path,
                               expected_nodes = NULL,
                               sampling_rate = NULL,
-                              positive_offset_policy = c("shift", "error")) {
+                              positive_offset_policy = c("shift", "error"),
+                              time_offset = NULL) {
   
   positive_offset_policy <- match.arg(positive_offset_policy)
   file_name <- basename(path)
@@ -129,24 +131,38 @@ check_and_fix_eeg <- function(path,
     if (!is.null(expected_nodes)) {
       match_idx <- match(tolower(expected_nodes), tolower(found_names))
       missing_nodes <- expected_nodes[is.na(match_idx)]
+      extra_names <- found_names[!(tolower(found_names) %in% tolower(expected_nodes))]
+      if (length(extra_names) > 0) {
+        notes <- c(notes, sprintf("dropped %d unmatched row(s) not in expected_nodes: %s",
+                                  length(extra_names), paste(extra_names, collapse = ", ")))
+      }
       mat <- mat[match_idx[!is.na(match_idx)], , drop = FALSE]
       rownames(mat) <- expected_nodes[!is.na(match_idx)]   # canonical casing
     } else {
       missing_nodes <- character(0)
+      extra_names <- character(0)
       if (nrow(mat) > 32) notes <- c(notes, "more than 32 candidate node rows found; left as-is, check manually")
     }
     
     # --- Ensure time vector is strictly positive ------------------------------
     time_was_shifted <- FALSE
     shift_amount <- 0
-    if (any(time_vec <= 0)) {
+    needs_shift <- any(time_vec <= 0) || !is.null(time_offset)
+    if (needs_shift) {
       if (positive_offset_policy == "shift") {
-        step <- if (length(time_vec) > 1) median(diff(sort(unique(time_vec)))) else 1
-        shift_amount <- abs(min(time_vec)) + step
-        time_vec <- time_vec + shift_amount
-        colnames(mat) <- as.character(time_vec)
-        time_was_shifted <- TRUE
-        notes <- c(notes, sprintf("time vector had non-positive values; shifted by +%.4g", shift_amount))
+        if (!is.null(time_offset)) {
+          shift_amount <- time_offset
+        } else {
+          step <- if (length(time_vec) > 1) median(diff(sort(unique(time_vec)))) else 1
+          shift_amount <- abs(min(time_vec)) + step
+        }
+        if (shift_amount != 0) {
+          time_vec <- time_vec + shift_amount
+          colnames(mat) <- as.character(time_vec)
+          time_was_shifted <- TRUE
+          notes <- c(notes, sprintf("time vector shifted by +%.4g%s", shift_amount,
+                                    if (!is.null(time_offset)) " (fixed dataset-wide offset)" else " (per-file, non-positive values found)"))
+        }
       } else {
         notes <- c(notes, "time vector has non-positive values (policy = 'error')")
       }
@@ -164,6 +180,8 @@ check_and_fix_eeg <- function(path,
       n_nodes_expected  = n_target,
       n_nodes_missing   = length(missing_nodes),
       missing_nodes     = paste(missing_nodes, collapse = "; "),
+      n_extra_cols      = length(extra_names),
+      extra_cols        = paste(extra_names, collapse = "; "),
       was_transposed    = was_transposed,
       had_time_row      = had_time_row,
       time_was_shifted  = time_was_shifted,
@@ -184,8 +202,8 @@ check_and_fix_eeg <- function(path,
   }, error = function(e) {
     diag <- data.frame(
       file = file_name, nrow = NA, ncol = NA, n_nodes_expected = NA,
-      n_nodes_missing = NA, missing_nodes = NA, was_transposed = NA,
-      had_time_row = NA, time_was_shifted = NA, shift_amount = NA,
+      n_nodes_missing = NA, missing_nodes = NA, n_extra_cols = NA, extra_cols = NA,
+      was_transposed = NA, had_time_row = NA, time_was_shifted = NA, shift_amount = NA,
       min_time = NA, max_time = NA, mean_value = NA, sd_value = NA,
       has_na = NA, is_valid = FALSE, notes = NA,
       error = conditionMessage(e), stringsAsFactors = FALSE
@@ -198,26 +216,69 @@ check_and_fix_eeg <- function(path,
 
 # ---- 3. Wrapper: loop over every CSV in a folder -------------------------
 
+#' @param consistent_offset If TRUE (default), computes ONE offset from the most
+#'   negative time value found anywhere in the folder and applies it to every file,
+#'   so shifted time stays comparable across participants/waves. If FALSE, each
+#'   file is shifted independently based on its own minimum (only guarantees
+#'   positivity within that file, not comparability across files).
+#' @param time_offset Manually force a specific offset instead of auto-computing
+#'   one (skips the first pass). Ignored if consistent_offset = FALSE.
 process_eeg_folder <- function(dir,
                                expected_nodes = NULL,
                                pattern = "\\.csv$",
                                sampling_rate = NULL,
-                               out_dir = NULL) {
+                               out_dir = NULL,
+                               consistent_offset = TRUE,
+                               time_offset = NULL) {
   
   files <- list.files(dir, pattern = pattern, full.names = TRUE)
   if (length(files) == 0) stop("No CSV files found in: ", dir)
   
+  global_offset <- NULL
+  
+  if (consistent_offset) {
+    if (!is.null(time_offset)) {
+      global_offset <- time_offset
+    } else {
+      # Pass 1: read every file UNSHIFTED (policy="error") just to find the
+      # most negative time value anywhere in the dataset.
+      mins <- vapply(files, function(f) {
+        r <- check_and_fix_eeg(f, expected_nodes = expected_nodes,
+                               sampling_rate = sampling_rate,
+                               positive_offset_policy = "error")
+        if (is.null(r$time)) NA_real_ else min(r$time, na.rm = TRUE)
+      }, numeric(1))
+      
+      global_min <- suppressWarnings(min(mins, na.rm = TRUE))
+      if (is.finite(global_min) && global_min <= 0) {
+        # step from whichever file actually had the most negative start
+        worst_file <- files[which.min(mins)]
+        worst_res  <- check_and_fix_eeg(worst_file, expected_nodes = expected_nodes,
+                                        sampling_rate = sampling_rate,
+                                        positive_offset_policy = "error")
+        step <- if (length(worst_res$time) > 1) median(diff(sort(unique(worst_res$time)))) else 1
+        global_offset <- abs(global_min) + step
+      } else {
+        global_offset <- 0
+      }
+      message(sprintf("Computed dataset-wide time offset: +%.4g (from most negative start time %.4g in %s)",
+                      global_offset, global_min, basename(files[which.min(mins)])))
+    }
+  }
+  
+  # Pass 2: apply the fix, using the SAME offset for every file when consistent_offset=TRUE
   results <- vector("list", length(files))
   names(results) <- basename(files)
   diag_rows <- vector("list", length(files))
   
   for (i in seq_along(files)) {
     res <- check_and_fix_eeg(files[i], expected_nodes = expected_nodes,
-                             sampling_rate = sampling_rate)
+                             sampling_rate = sampling_rate,
+                             time_offset = if (consistent_offset) global_offset else NULL)
     results[[i]] <- res
     diag_rows[[i]] <- res$diagnostics
     
-    if (!is.null(out_dir) && res$diagnostics$is_valid) {
+    if (!is.null(out_dir) && isTRUE(res$diagnostics$is_valid)) {
       if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
       write.csv(res$data, file.path(out_dir, basename(files[i])), row.names = TRUE)
     }
@@ -227,7 +288,13 @@ process_eeg_folder <- function(dir,
   rownames(summary_table) <- NULL
   
   list(
-    cleaned   = results,        # named list: each$data, each$time, each$diagnostics
-    summary   = summary_table   # one row per file, like your summarise() idea
+    cleaned        = results,        # named list: each$data, each$time, each$diagnostics
+    summary        = summary_table,  # one row per file, like your summarise() idea
+    global_offset  = global_offset   # the single offset applied dataset-wide (if used)
   )
 }
+# Testing ----------------
+test <- check_and_fix_eeg("~/eeg/raw_data/SPUR-EEG-data/033Y_Alpha.csv")
+
+# result <- process_eeg_folder("raw", expected_nodes = expected_nodes, sampling_rate = 128, out_dir = "clean")
+test
