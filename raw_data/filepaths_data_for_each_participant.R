@@ -1,4 +1,4 @@
-base_dir <- "~/eeg/raw_data/SPUR-EEG-data"
+base_dir <- "~/eeg/raw_data/cleaned-data/SPUR-EEG-data"
 
 # Participant: 001Y  (no Alpha file)
 # time vector present, nodes present
@@ -10,6 +10,7 @@ filepaths_001Y <- c(
 )
 
 # Participant: 002Y  (no Beta file)
+# no time vector no nodes, 32 rows
 filepaths_002Y <- c(
   alpha = file.path(base_dir, "002Y_Alpha.csv"),
   delta = file.path(base_dir, "002Y_Delta.csv"),
@@ -18,6 +19,7 @@ filepaths_002Y <- c(
 )
 
 # Participant: 004O  (no Delta file)
+# no time vector no nodes, 32 rows
 filepaths_004O <- c(
   alpha = file.path(base_dir, "004O_Alpha.csv"),
   beta  = file.path(base_dir, "004O_Beta.csv"),
@@ -26,6 +28,7 @@ filepaths_004O <- c(
 )
 
 # Participant: 008O  (no Gamma file)
+# no time vector no nodes, 32 rows
 filepaths_008O <- c(
   alpha = file.path(base_dir, "008O_Alpha.csv"),
   beta  = file.path(base_dir, "008O_Beta.csv"),
@@ -33,7 +36,8 @@ filepaths_008O <- c(
   theta = file.path(base_dir, "008O_Theta.csv")
 )
 
-# Participant: 008Y (No Time Column and Theta missing)
+# Participant: 008Y (Theta missing)
+# no time vector no nodes, 32 rows
 filepaths_008Y <- c(
   alpha = file.path(base_dir, "008Y_Alpha.csv"),
   beta  = file.path(base_dir, "008Y_Beta.csv"),
@@ -42,7 +46,8 @@ filepaths_008Y <- c(
 )
 
 
-# Participant: 012O (No Time Column, only 32 rows???)
+# Participant: 012O 
+# no time vector no nodes, 32 rows
 filepaths_012O <- c(
   alpha = file.path(base_dir, "012O_Alpha.csv"),
   beta  = file.path(base_dir, "012O_Beta.csv"),
@@ -52,6 +57,7 @@ filepaths_012O <- c(
 )
 
 # Participant: 013Y  (no Alpha file)
+# no time vector no nodes, 32 rows
 filepaths_013Y <- c(
   beta  = file.path(base_dir, "013Y_Beta.csv"),
   delta = file.path(base_dir, "013Y_Delta.csv"),
@@ -60,6 +66,7 @@ filepaths_013Y <- c(
 )
 
 # Participant: 016O  (no Beta file)
+# no time vector no nodes, 32 rows
 filepaths_016O <- c(
   alpha = file.path(base_dir, "016O_Alpha.csv"),
   delta = file.path(base_dir, "016O_Delta.csv"),
@@ -68,6 +75,7 @@ filepaths_016O <- c(
 )
 
 # Participant: 017Y  (no Delta file)
+# no time vector no nodes, 32 rows
 filepaths_017Y <- c(
   alpha = file.path(base_dir, "017Y_Alpha.csv"),
   beta  = file.path(base_dir, "017Y_Beta.csv"),
@@ -76,6 +84,7 @@ filepaths_017Y <- c(
 )
 
 # Participant: 024Y  (no Gamma file)
+# no time vector no nodes, 32 rows
 filepaths_024Y <- c(
   alpha = file.path(base_dir, "024Y_Alpha.csv"),
   beta  = file.path(base_dir, "024Y_Beta.csv"),
@@ -84,6 +93,7 @@ filepaths_024Y <- c(
 )
 
 # Participant: 029Y (no Theta file)
+# no time vector no nodes, 32 rows
 filepaths_029Y <- c(
   alpha = file.path(base_dir, "029Y_Alpha.csv"),
   beta  = file.path(base_dir, "029Y_Beta.csv"),
@@ -91,7 +101,8 @@ filepaths_029Y <- c(
   gamma = file.path(base_dir, "029Y_Gamma.csv"),
 )
 
-# Participant: 033Y (No time column??)
+# Participant: 033Y 
+# no time vector no nodes, 32 rows
 filepaths_033Y <- c(
   alpha = file.path(base_dir, "033Y_Alpha.csv"),
   beta  = file.path(base_dir, "033Y_Beta.csv"),
@@ -101,6 +112,7 @@ filepaths_033Y <- c(
 )
 
 # Participant: 038Y  (no Alpha file)
+# no time vector no nodes, 32 rows
 filepaths_038Y <- c(
   beta  = file.path(base_dir, "038Y_Beta.csv"),
   delta = file.path(base_dir, "038Y_Delta.csv"),
@@ -109,6 +121,7 @@ filepaths_038Y <- c(
 )
 
 # Participant: CTEEG003O
+# time vector present, nodes present
 filepaths_CTEEG003O <- c(
   alpha = file.path(base_dir, "CTEEG003O_Alpha.csv"),
   beta  = file.path(base_dir, "CTEEG003O_Beta.csv"),
@@ -118,6 +131,7 @@ filepaths_CTEEG003O <- c(
 )
 
 # Participant: CTEEG006Y
+# time vector present, nodes present
 filepaths_CTEEG006Y <- c(
   alpha = file.path(base_dir, "CTEEG006Y_Alpha.csv"),
   beta  = file.path(base_dir, "CTEEG006Y_Beta.csv"),
@@ -127,6 +141,7 @@ filepaths_CTEEG006Y <- c(
 )
 
 # Participant: CTEEG012Y
+# time vector present, nodes present
 filepaths_CTEEG012Y <- c(
   alpha = file.path(base_dir, "CTEEG012Y_Alpha.csv"),
   beta  = file.path(base_dir, "CTEEG012Y_Beta.csv"),
@@ -136,6 +151,7 @@ filepaths_CTEEG012Y <- c(
 )
 
 # Participant: CTEEG014Y
+# time vector present, nodes present
 filepaths_CTEEG014Y <- c(
   alpha = file.path(base_dir, "CTEEG014Y_Alpha.csv"),
   beta  = file.path(base_dir, "CTEEG014Y_Beta.csv"),
@@ -145,6 +161,7 @@ filepaths_CTEEG014Y <- c(
 )
 
 # Participant: CTEEG022Y (ALREADY HAVE DATA ON THAT)
+# time vector present, nodes present
 filepaths_CTEEG022Y <- c(
   alpha = file.path(base_dir, "CTEEG022Y_Alpha.csv"),
   beta  = file.path(base_dir, "CTEEG022Y_Beta.csv"),
@@ -154,6 +171,7 @@ filepaths_CTEEG022Y <- c(
 )
 
 # Participant: CTEEG037Y
+# time vector present, nodes present
 filepaths_CTEEG037Y <- c(
   alpha = file.path(base_dir, "CTEEG037Y_Alpha.csv"),
   beta  = file.path(base_dir, "CTEEG037Y_Beta.csv"),

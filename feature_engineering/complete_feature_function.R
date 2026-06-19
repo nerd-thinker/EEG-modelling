@@ -192,51 +192,52 @@ extract_all_features <- function(filepaths,
       relocate(band, channel)
   })
   
-  # Step 3: Cross-band features
+  # ── 3. Cross-band features ────────────────────────────────────────────────────
   message("Computing cross-band features...")
   
   abs_powers <- sapply(setNames(bands, bands), function(b) {
-    sapply(channels, function(ch) {
-      band_power(as.numeric(band_data[[b]][[ch]]))
-    })
+    sapply(channels, function(ch) band_power(as.numeric(band_data[[b]][[ch]])))
   })
+  # abs_powers is now channels × available_bands only
   
   total_power <- rowSums(abs_powers)
-  rel_powers  <- abs_powers / total_power
-  colnames(rel_powers) <- paste0("rel_power_", bands)
   
-  power_ratios <- data.frame(
-    ratio_theta_alpha = abs_powers[, "theta"] / abs_powers[, "alpha"],
-    ratio_alpha_beta  = abs_powers[, "alpha"] / abs_powers[, "beta"],
-    ratio_delta_beta  = abs_powers[, "delta"] / abs_powers[, "beta"],
-    ratio_theta_beta  = abs_powers[, "theta"] / abs_powers[, "beta"],
-    ratio_stress      = (abs_powers[, "alpha"] + abs_powers[, "theta"]) / abs_powers[, "beta"]
+  # Relative powers — only for bands that exist
+  rel_power_feats <- as.list(
+    setNames(
+      as.vector(abs_powers / total_power),
+      paste0("cross_", rep(channels, length(bands)),
+             "_rel_power_", rep(bands, each = length(channels)))
+    )
   )
   
-  peak_psd_by_band <- sapply(setNames(bands, bands), function(b) {
-    sapply(channels, function(ch) {
-      x    <- as.numeric(band_data[[b]][[ch]])
-      # Gam smoothing
-      time <- seq_along(x)
-      fit  <- gam(x ~ s(time, k=k))
-      sx   <- as.numeric(predict(fit))
-      
-      # PSD - skip bin 1(DC component)
-      spec <- abs(fft(sx))^2 / length(sx)
-      spec <- spec[2:(length(spec) / 2)] ##start from bin 2  
-      which.max(spec) + 1                ##index correction
-    })
-  })
-  colnames(peak_psd_by_band) <- paste0("peak_psd_", bands)
+  # Safe band accessor — returns NA vector if band missing
+  get_power <- function(band) {
+    if (band %in% colnames(abs_powers)) abs_powers[, band]
+    else rep(NA_real_, length(channels))
+  }
   
-  cross_band <- as.data.frame(cbind(rel_powers, power_ratios, peak_psd_by_band)) %>%
-    mutate(channel = channels) %>%
-    relocate(channel)
+  # Ratios — computed with NA propagation when a band is absent
+  ratio_feats <- data.frame(
+    ratio_theta_alpha = get_power("theta") / get_power("alpha"),
+    ratio_alpha_beta  = get_power("alpha") / get_power("beta"),
+    ratio_delta_beta  = get_power("delta") / get_power("beta"),
+    ratio_theta_beta  = get_power("theta") / get_power("beta"),
+    ratio_stress      = (get_power("alpha") + get_power("theta")) / get_power("beta")
+  ) 
+  
+  ratio_list <- as.list(
+    setNames(
+      unlist(ratio_feats),
+      paste0("cross_", rep(channels, ncol(ratio_feats)),
+             "_", rep(names(ratio_feats), each = length(channels)))
+    )
+  )
   
   total_time <- proc.time() -start_total
   message(sprintf("\nDone! Total time: %.1f seconds (%.1f minutes)", total_time["elapsed"], total_time["elapsed"]/60))
   
-  list(per_band   = per_band, cross_band = cross_band)
+  cross_list <- c(rel_power_feats, ratio_list)
 }
 
 # Run it
@@ -249,7 +250,7 @@ filepaths <- c(
   theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
 )
 results <- extract_all_features(
-  filepaths = filepaths,
+  filepaths = filepaths_001Y,
   scaling   = "z_score",
   k         = 20
 )
@@ -264,9 +265,10 @@ all_features <- bind_rows(results$per_band)
 # Possible problems --------------
 
 # Next steps -----------
-## a bit too many features so will need to run dimentionality reduction algorithms (eg. PCA - principal component analysis)
+## a bit too many features so will need to run dimentionality reduction algorithms 
+## (eg. PCA - principal component analysis)
 
 
 
-plot(my_data$)
+
 
