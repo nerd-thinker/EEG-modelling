@@ -98,7 +98,7 @@ filepaths_029Y <- c(
   alpha = file.path(base_dir, "029Y_Alpha.csv"),
   beta  = file.path(base_dir, "029Y_Beta.csv"),
   delta = file.path(base_dir, "029Y_Delta.csv"),
-  gamma = file.path(base_dir, "029Y_Gamma.csv"),
+  gamma = file.path(base_dir, "029Y_Gamma.csv")
 )
 
 # Participant: 033Y 

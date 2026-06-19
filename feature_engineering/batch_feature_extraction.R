@@ -151,7 +151,7 @@ run_batch <- function(all_filepaths,
 # ── Run ───────────────────────────────────────────────────────────────────────
 # Source your other scripts first, then call run_batch():
 
-source("~/eeg/complete_feature_function.R")
+source("~/eeg/feature_engineering/complete_feature_function.R")
 source("~/eeg/filepaths_data_for_each_participant.R")
 
 results <- run_batch(
