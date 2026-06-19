@@ -10,3 +10,5 @@
 .positai
 raw_data/
 *.rds
+*.csv
+*.xlsx
