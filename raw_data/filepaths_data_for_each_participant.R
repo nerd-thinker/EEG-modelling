@@ -208,11 +208,10 @@ all_filepaths <- list(
 #   extract_all_features(filepaths = fp, scaling = "z_score", k = 20)
 # })
 
-<<<<<<< HEAD
+
 # run for the participant ---------------
 #participant_row <- extract_all_features(
 #  filepaths      = filepaths_CTEEG003O,
 #  k              = 70
 #)
-=======
->>>>>>> 873fb0d8142750cf7dfe5af6724125d0a86eab80
+
