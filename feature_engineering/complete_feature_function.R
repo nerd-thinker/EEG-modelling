@@ -157,7 +157,7 @@ extract_all_features <- function(filepaths,
   # Step 1: Read all files
   message("Reading Excel files...")
   band_data <- lapply(setNames(filepaths, bands), function(fp) {
-    read_excel(fp)
+    read_csv(fp)
   })
   
   # Extract time and channels from first file
@@ -243,6 +243,7 @@ extract_all_features <- function(filepaths,
 
 # Run it
 # Step 1: name your filepaths by band
+<<<<<<< HEAD
 #filepaths <- c(
 #  alpha = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx",
 #  beta  = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx",
@@ -250,6 +251,15 @@ extract_all_features <- function(filepaths,
 #  delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
 #  theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
 #)
+=======
+filepaths <- c(
+  alpha = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx",
+  beta  = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx",
+  gamma = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Gamma1.xlsx", 
+  delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
+  theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
+)
+>>>>>>> 873fb0d8142750cf7dfe5af6724125d0a86eab80
 #results <- extract_all_features(
 #  filepaths = filepaths_001Y,
 #  scaling   = "z_score",
@@ -257,8 +267,13 @@ extract_all_features <- function(filepaths,
 #)
 
 # Results -----------------
+<<<<<<< HEAD
 # results$per_band$alpha    # alpha band — channels x features data frame
 # results$cross_band         # cross-band features — channels x features data frame
+=======
+#results$per_band$alpha    # alpha band — channels x features data frame
+#results$cross_band         # cross-band features — channels x features data frame
+>>>>>>> 873fb0d8142750cf7dfe5af6724125d0a86eab80
 
 # ── 4. Assemble single wide row ────────────────────────────────────────────
 all_feats <- c(list(participant_id = participant_id),

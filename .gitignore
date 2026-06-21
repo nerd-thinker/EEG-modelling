@@ -11,4 +11,4 @@
 raw_data/
 *.rds
 *.csv
-*.xlsx
+*.xlsx.~lock.*#
