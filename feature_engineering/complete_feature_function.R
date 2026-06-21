@@ -156,7 +156,7 @@ extract_all_features <- function(filepaths,
   # Step 1: Read all files
   message("Reading Excel files...")
   band_data <- lapply(setNames(filepaths, bands), function(fp) {
-    read_excel(fp)
+    read_csv(fp)
   })
   
   # Extract time and channels from first file
@@ -249,15 +249,15 @@ filepaths <- c(
   delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
   theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
 )
-results <- extract_all_features(
-  filepaths = filepaths_001Y,
-  scaling   = "z_score",
-  k         = 20
-)
+#results <- extract_all_features(
+#  filepaths = filepaths_001Y,
+#  scaling   = "z_score",
+#  k         = 20
+#)
 
 # Results -----------------
-results$per_band$alpha    # alpha band — channels x features data frame
-results$cross_band         # cross-band features — channels x features data frame
+#results$per_band$alpha    # alpha band — channels x features data frame
+#results$cross_band         # cross-band features — channels x features data frame
 
 # Combine all bands into one long data frame
 all_features <- bind_rows(results$per_band)
