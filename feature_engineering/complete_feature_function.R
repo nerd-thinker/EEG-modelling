@@ -148,6 +148,7 @@ get_features <- function(x,
 ## Data assumptions: 
 ## data is wide type, data has columns: Time, Fp1, other nodes, Time starts at 0
 extract_all_features <- function(filepaths,
+                                 participant_id = "unknown",
                                  scaling = "z_score",
                                  k       = 20) {
   start_total <- proc.time()
@@ -242,25 +243,29 @@ extract_all_features <- function(filepaths,
 
 # Run it
 # Step 1: name your filepaths by band
-filepaths <- c(
-  alpha = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx",
-  beta  = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx",
-  gamma = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Gamma1.xlsx", 
-  delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
-  theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
-)
-results <- extract_all_features(
-  filepaths = filepaths_001Y,
-  scaling   = "z_score",
-  k         = 20
-)
+#filepaths <- c(
+#  alpha = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Alpha.xlsx",
+#  beta  = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Beta.xlsx",
+#  gamma = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Gamma1.xlsx", 
+#  delta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Delta.xlsx",
+#  theta = "/home/ks/EGG-modeling/raw_data/CTEEG022Y_Theta.xlsx"
+#)
+#results <- extract_all_features(
+#  filepaths = filepaths_001Y,
+#  scaling   = "z_score",
+#  k         = 20
+#)
 
 # Results -----------------
-results$per_band$alpha    # alpha band — channels x features data frame
-results$cross_band         # cross-band features — channels x features data frame
+# results$per_band$alpha    # alpha band — channels x features data frame
+# results$cross_band         # cross-band features — channels x features data frame
 
-# Combine all bands into one long data frame
-all_features <- bind_rows(results$per_band)
+# ── 4. Assemble single wide row ────────────────────────────────────────────
+all_feats <- c(list(participant_id = participant_id),
+               feature_list,
+               cross_list)
+
+result_df <- as.data.frame(all_feats, check.names = FALSE)
 
 # Possible problems --------------
 

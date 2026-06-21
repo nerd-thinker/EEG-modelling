@@ -1,4 +1,4 @@
-base_dir <- "~/eeg/raw_data/cleaned-data/SPUR-EEG-data"
+base_dir <- "~/eeg/raw_data/cleaned-data"
 
 # Participant: 001Y  (no Alpha file)
 # time vector present, nodes present
@@ -209,8 +209,7 @@ all_filepaths <- list(
 # })
 
 # run for the participant ---------------
-participant_row <- extract_all_features(
-  filepaths      = filepaths_CTEEG003O,
-  participant_id = "CTEEG003O",
-  k              = 70
-)
+#participant_row <- extract_all_features(
+#  filepaths      = filepaths_CTEEG003O,
+#  k              = 70
+#)
