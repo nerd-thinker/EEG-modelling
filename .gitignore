@@ -8,3 +8,7 @@
 .RData
 .Rhistory
 .positai
+raw_data/
+*.rds
+*.csv
+*.xlsx
