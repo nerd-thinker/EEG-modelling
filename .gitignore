@@ -12,3 +12,4 @@ raw_data/
 *.rds
 *.csv
 *.xlsx.~lock.*#
+raw_data/SPUR-EEG-DATA
