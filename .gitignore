@@ -9,7 +9,9 @@
 .Rhistory
 .positai
 raw_data/
+raw_data/
 *.rds
 *.csv
+*.xlsx
 *.xlsx.~lock.*#
-raw_data/SPUR-EEG-data
+raw_data/SPUR-EEG-data/
