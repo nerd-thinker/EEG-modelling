@@ -1,65 +1,26 @@
 # batch_feature_extraction.R
 # ─────────────────────────────────────────────────────────────────────────────
-# Parallel batch feature extraction — one participant per core.
-# Designed to be run from the terminal with:
+# Can be used two ways:
 #
-#   R CMD BATCH --no-save --no-restore batch_feature_extraction.R batch.log &
+# 1. From the terminal (background, logs to file):
+#      R CMD BATCH --no-save --no-restore batch_feature_extraction.R batch.log &
+#      tail -f batch.log
 #
-# Progress is written to batch.log. To watch it live:
-#   tail -f batch.log
+# 2. From the R console interactively:
+#      source("~/eeg/batch_feature_extraction.R")
+#      run_batch_parallel(all_filepaths)
 #
-# Safe to interrupt at any time with Ctrl+C — completed participant CSVs
-# are already saved to disk. Re-run with SKIP_DONE = TRUE to resume.
+# Safe to interrupt at any time — completed CSVs are already on disk.
+# Resume by re-running with skip_done = TRUE (default).
 # ─────────────────────────────────────────────────────────────────────────────
 
 library(parallel)
 library(dplyr)
 
-source("~/eeg/feature_engineering/complete_feature_function.R")
-source("~/eeg/raw_data/filepaths_data_for_each_participant.R")
-
-# ── Config ────────────────────────────────────────────────────────────────────
-OUT_DIR   <- "~/eeg/features"
-K         <- 70
-SKIP_DONE <- TRUE
-N_CORES   <- 5   # Ryzen 5 2600 has 6 cores — leave 1 free for the OS
-
-# ── Setup ─────────────────────────────────────────────────────────────────────
-out_dir <- path.expand(OUT_DIR)
-if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-
-participant_ids <- names(all_filepaths)
-n               <- length(participant_ids)
-
-# Filter already-done participants
-if (SKIP_DONE) {
-  already_done <- file.exists(
-    file.path(out_dir, paste0(participant_ids, "_features.csv"))
-  )
-  if (any(already_done)) {
-    message(sprintf("Skipping %d already-completed participant(s): %s",
-                    sum(already_done),
-                    paste(participant_ids[already_done], collapse = ", ")))
-  }
-  todo_ids <- participant_ids[!already_done]
-} else {
-  already_done <- rep(FALSE, n)
-  todo_ids     <- participant_ids
-}
-
-n_todo <- length(todo_ids)
-
-if (n_todo == 0) {
-  message("Nothing to do — all participants already complete.")
-  quit(save = "no")
-}
-
-message(sprintf("\n%d participant(s) to process across %d cores", n_todo, N_CORES))
-message(sprintf("Estimated time: ~%.0f hrs (assuming ~115 min per participant)\n",
-                ceiling(n_todo / N_CORES) * 115 / 60))
-
 # ── Worker function ───────────────────────────────────────────────────────────
-run_one_participant <- function(pid, all_filepaths, out_dir, k) {
+# Self-contained: sources its own dependencies so it works inside FORK workers
+
+.run_one_participant <- function(pid, all_filepaths, out_dir, k) {
   
   source("~/eeg/feature_engineering/complete_feature_function.R")
   
@@ -86,31 +47,24 @@ run_one_participant <- function(pid, all_filepaths, out_dir, k) {
   result
 }
 
-# ── Progress bar helpers ───────────────────────────────────────────────────────
-# Prints a text progress bar to the log that looks like:
-#   [=====>    ] 6/19 | done: 5 failed: 1 | elapsed: 12.3 min | ETA: 14:42
-
-format_eta <- function(eta_time) {
-  format(as.POSIXct(eta_time, origin = "1970-01-01"), "%H:%M")
-}
-
-print_progress <- function(completed, n_todo, n_done, n_failed,
-                           batch_start, elapsed_per_batch) {
+# ── Progress bar ──────────────────────────────────────────────────────────────
+.print_progress <- function(completed, n_todo, n_done, n_failed,
+                            batch_start, elapsed_per_batch, n_cores) {
   
-  pct        <- completed / n_todo
-  bar_width  <- 30
-  filled     <- round(pct * bar_width)
-  bar        <- paste0(strrep("=", max(0, filled - 1)),
-                       if (filled > 0 && filled < bar_width) ">" else "",
-                       strrep(" ", bar_width - filled))
+  pct       <- completed / n_todo
+  bar_width <- 30
+  filled    <- round(pct * bar_width)
+  bar       <- paste0(strrep("=", max(0, filled - 1)),
+                      if (filled > 0 && filled < bar_width) ">" else "",
+                      strrep(" ", bar_width - filled))
   
   elapsed_min  <- (proc.time() - batch_start)["elapsed"] / 60
-  batches_left <- ceiling((n_todo - completed) / N_CORES)
+  batches_left <- ceiling((n_todo - completed) / n_cores)
   
   if (length(elapsed_per_batch) > 0) {
     avg_batch_min <- mean(elapsed_per_batch)
     eta_min       <- batches_left * avg_batch_min
-    eta_clock     <- format_eta(as.numeric(Sys.time()) + eta_min * 60)
+    eta_clock     <- format(Sys.time() + eta_min * 60, "%H:%M")
     eta_str       <- sprintf("ETA: %s (~%.0f min)", eta_clock, eta_min)
   } else {
     eta_str <- "ETA: calculating..."
@@ -120,100 +74,155 @@ print_progress <- function(completed, n_todo, n_done, n_failed,
                   bar, completed, n_todo, n_done, n_failed, elapsed_min, eta_str))
 }
 
-# ── Run in parallel batches ───────────────────────────────────────────────────
-# Split todo_ids into batches of N_CORES. After each batch completes,
-# update the progress bar before starting the next batch.
-# This is what makes progress reporting possible with parallel workers.
+# ── Main batch function ───────────────────────────────────────────────────────
 
-batches <- split(todo_ids,
-                 ceiling(seq_along(todo_ids) / N_CORES))
-
-batch_start      <- proc.time()
-all_results      <- list()
-elapsed_per_batch <- numeric(0)
-n_done           <- 0
-n_failed         <- 0
-completed        <- 0
-
-for (batch_num in seq_along(batches)) {
+run_batch_parallel <- function(all_filepaths,
+                               out_dir   = "~/eeg/features",
+                               k         = 70,
+                               skip_done = TRUE,
+                               n_cores   = 5) {
   
-  batch     <- batches[[batch_num]]
-  n_in_batch <- length(batch)
+  out_dir <- path.expand(out_dir)
+  if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
   
-  message(sprintf("── Batch %d/%d: processing %s",
-                  batch_num, length(batches),
-                  paste(batch, collapse = ", ")))
+  participant_ids <- names(all_filepaths)
+  n               <- length(participant_ids)
   
-  batch_t0 <- proc.time()
-  
-  cl <- makeCluster(min(N_CORES, n_in_batch), type = "FORK")
-  batch_results <- parLapply(cl, batch, function(pid) {
-    run_one_participant(pid, all_filepaths, out_dir, K)
-  })
-  stopCluster(cl)
-  
-  # Record results
-  for (res in batch_results) {
-    all_results[[res$pid]] <- res
-    if (res$ok) {
-      n_done <- n_done + 1
-      message(sprintf("  OK      %-15s  %.1f min", res$pid, res$elapsed_min))
-    } else {
-      n_failed <- n_failed + 1
-      message(sprintf("  FAILED  %-15s  %.1f min  -- %s",
-                      res$pid, res$elapsed_min, res$error))
+  # ── Skip already-done participants ─────────────────────────────────────────
+  if (skip_done) {
+    already_done <- file.exists(
+      file.path(out_dir, paste0(participant_ids, "_features.csv"))
+    )
+    if (any(already_done)) {
+      message(sprintf("Skipping %d already-completed participant(s): %s",
+                      sum(already_done),
+                      paste(participant_ids[already_done], collapse = ", ")))
     }
+    todo_ids <- participant_ids[!already_done]
+  } else {
+    already_done <- rep(FALSE, n)
+    todo_ids     <- participant_ids
   }
   
-  completed         <- completed + n_in_batch
-  batch_elapsed_min <- (proc.time() - batch_t0)["elapsed"] / 60
-  elapsed_per_batch <- c(elapsed_per_batch, batch_elapsed_min)
+  n_todo <- length(todo_ids)
   
-  print_progress(completed, n_todo, n_done, n_failed,
-                 batch_start, elapsed_per_batch)
+  if (n_todo == 0) {
+    message("Nothing to do — all participants already complete.")
+    return(invisible(NULL))
+  }
+  
+  message(sprintf("\n%d participant(s) to process across %d cores", n_todo, n_cores))
+  message(sprintf("Estimated total time: ~%.0f hrs (assuming ~115 min per participant)\n",
+                  ceiling(n_todo / n_cores) * 115 / 60))
+  
+  # ── Split into batches of n_cores ──────────────────────────────────────────
+  batches           <- split(todo_ids, ceiling(seq_along(todo_ids) / n_cores))
+  batch_start       <- proc.time()
+  all_results       <- list()
+  elapsed_per_batch <- numeric(0)
+  n_done            <- 0
+  n_failed          <- 0
+  completed         <- 0
+  
+  for (batch_num in seq_along(batches)) {
+    
+    batch      <- batches[[batch_num]]
+    n_in_batch <- length(batch)
+    
+    message(sprintf("── Batch %d/%d: processing %s",
+                    batch_num, length(batches),
+                    paste(batch, collapse = ", ")))
+    
+    batch_t0 <- proc.time()
+    
+    cl <- makeCluster(min(n_cores, n_in_batch), type = "FORK")
+    batch_results <- parLapply(cl, batch, function(pid) {
+      .run_one_participant(pid, all_filepaths, out_dir, k)
+    })
+    stopCluster(cl)
+    
+    for (res in batch_results) {
+      all_results[[res$pid]] <- res
+      if (res$ok) {
+        n_done <- n_done + 1
+        message(sprintf("  OK      %-15s  %.1f min", res$pid, res$elapsed_min))
+      } else {
+        n_failed <- n_failed + 1
+        message(sprintf("  FAILED  %-15s  %.1f min  -- %s",
+                        res$pid, res$elapsed_min, res$error))
+      }
+    }
+    
+    completed         <- completed + n_in_batch
+    elapsed_per_batch <- c(elapsed_per_batch,
+                           (proc.time() - batch_t0)["elapsed"] / 60)
+    
+    .print_progress(completed, n_todo, n_done, n_failed,
+                    batch_start, elapsed_per_batch, n_cores)
+  }
+  
+  # ── Final summary ──────────────────────────────────────────────────────────
+  total_min <- (proc.time() - batch_start)["elapsed"] / 60
+  message(sprintf("══ BATCH COMPLETE in %.1f min (%.1f hrs) ══\n",
+                  total_min, total_min / 60))
+  
+  summary_df <- data.frame(
+    participant_id = c(participant_ids[already_done],
+                       sapply(all_results, `[[`, "pid")),
+    status         = c(rep("skipped", sum(already_done)),
+                       ifelse(sapply(all_results, `[[`, "ok"), "done", "failed")),
+    elapsed_min    = c(rep(NA_real_, sum(already_done)),
+                       sapply(all_results, `[[`, "elapsed_min")),
+    error          = c(rep("", sum(already_done)),
+                       sapply(all_results, `[[`, "error")),
+    stringsAsFactors = FALSE
+  )
+  
+  message("Per-participant summary:")
+  print(summary_df)
+  
+  failed <- summary_df[summary_df$status == "failed", ]
+  if (nrow(failed) > 0) {
+    message("\nFailed participants:")
+    print(failed[, c("participant_id", "error")])
+  }
+  
+  # ── Combine all CSVs into master file ──────────────────────────────────────
+  message("\nCombining participant CSVs into master file...")
+  
+  csv_files <- list.files(out_dir, pattern = "_features\\.csv$", full.names = TRUE)
+  csv_files <- csv_files[!grepl("ALL_PARTICIPANTS", csv_files)]
+  
+  if (length(csv_files) == 0) {
+    warning("No feature CSVs found — nothing to combine.")
+  } else {
+    combined    <- bind_rows(lapply(csv_files, read.csv, check.names = FALSE))
+    master_path <- file.path(out_dir, "ALL_PARTICIPANTS_features.csv")
+    write.csv(combined, master_path, row.names = FALSE)
+    message(sprintf("Master file saved: %s", master_path))
+    message(sprintf("  %d participants x %d feature columns",
+                    nrow(combined), ncol(combined) - 1))
+  }
+  
+  message("\nDone.")
+  invisible(summary_df)
 }
 
-# ── Final summary ─────────────────────────────────────────────────────────────
-total_min <- (proc.time() - batch_start)["elapsed"] / 60
 
-message(sprintf("══ BATCH COMPLETE in %.1f min (%.1f hrs) ══", total_min, total_min / 60))
+# ── Execution ─────────────────────────────────────────────────────────────────
+# This block runs automatically under R CMD BATCH.
+# When sourcing interactively, skip this block and call run_batch_parallel()
+# manually after sourcing your other scripts.
 
-summary_df <- data.frame(
-  participant_id = c(participant_ids[already_done],
-                     sapply(all_results, `[[`, "pid")),
-  status         = c(rep("skipped", sum(already_done)),
-                     ifelse(sapply(all_results, `[[`, "ok"), "done", "failed")),
-  elapsed_min    = c(rep(NA_real_, sum(already_done)),
-                     sapply(all_results, `[[`, "elapsed_min")),
-  error          = c(rep("", sum(already_done)),
-                     sapply(all_results, `[[`, "error")),
-  stringsAsFactors = FALSE
-)
-
-message("\nPer-participant summary:")
-print(summary_df)
-
-failed <- summary_df[summary_df$status == "failed", ]
-if (nrow(failed) > 0) {
-  message("\nFailed participants:")
-  print(failed[, c("participant_id", "error")])
+if (!interactive()) {
+  source("~/eeg/feature_engineering/complete_feature_function.R")
+  source("~/eeg/filepaths_data_for_each_participant.R")
+  
+  run_batch_parallel(
+    all_filepaths = all_filepaths,
+    out_dir       = "~/eeg/features",
+    k             = 70,
+    skip_done     = TRUE,
+    n_cores       = 5
+  )
 }
-
-# ── Combine all CSVs into master file ─────────────────────────────────────────
-message("\nCombining participant CSVs into master file...")
-
-csv_files <- list.files(out_dir, pattern = "_features\\.csv$", full.names = TRUE)
-csv_files <- csv_files[!grepl("ALL_PARTICIPANTS", csv_files)]
-
-if (length(csv_files) == 0) {
-  warning("No feature CSVs found — nothing to combine.")
-} else {
-  combined    <- bind_rows(lapply(csv_files, read.csv, check.names = FALSE))
-  master_path <- file.path(out_dir, "ALL_PARTICIPANTS_features.csv")
-  write.csv(combined, master_path, row.names = FALSE)
-  message(sprintf("Master file saved: %s", master_path))
-  message(sprintf("  %d participants x %d feature columns",
-                  nrow(combined), ncol(combined) - 1))
-}
-
-message("\nDone.")
