@@ -216,7 +216,7 @@ run_batch_parallel <- function(all_filepaths,
 
 if (!interactive()) {
   source("~/eeg/feature_engineering/complete_feature_function.R")
-  source("~/eeg/filepaths_data_for_each_participant.R")
+  source("~/eeg/raw_data/filepaths_data_for_each_participant.R")
   
   run_batch_parallel(
     all_filepaths = all_filepaths,
