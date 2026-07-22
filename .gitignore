@@ -16,3 +16,4 @@ raw_data/
 *.xlsx.~lock.*#
 raw_data/SPUR-EEG-data/
 raw_data/SPUR-EEG-data/
+.posit/assistant
