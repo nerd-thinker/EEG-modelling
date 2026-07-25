@@ -8,8 +8,10 @@
 .RData
 .Rhistory
 .positai
-raw_data/
-raw_data/
+raw_data/SPUR-EEG-data/
+raw_data/*.rds
+raw_data/*.csv
+raw_data/*.xlsx
 *.rds
 *.csv
 *.xlsx
