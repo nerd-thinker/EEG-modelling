@@ -93,4 +93,4 @@ cat("Features remaining:", ncol(features_clean) - 1, "\n")
 cat("Participants:", nrow(features_clean), "\n")
 cat("NAs remaining:", sum(is.na(features_clean)), "\n")
 
-saveRDS(features_clean, file = "features_clean.RDS")
+saveRDS(features_clean, file = "features_clean.rds")
