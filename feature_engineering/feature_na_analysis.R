@@ -13,8 +13,8 @@ sum(is.na(features_all))
 na_summary <- colSums(is.na(features_all))
 na_summary[na_summary > 0]
 
-na_summary1 <- colSums(is.na(feat001Y))
-na_summary1[na_summary1 > 0]
+na_summary1 <- colSums(is.na(features_all))
+na_summary1[na_summary1 > 1]
 
 na_rows <- rowSums(is.na(feat001Y)) > 0
 features_all$participant_id[na_rows]
@@ -66,4 +66,31 @@ cat("Participants affected:", length(affected_participants), "\n")
 ## remove these features from the dataset without losing much information.
 
 ## more than one NA features: -----------------------
-table(summary1)
+table(na_summary1) 
+## plot to see if some number of feature Na repeat to detect a possible pattern
+plot(table(na_summary1)) #, xlab = "feature Na's frequency", ylab = "Amount of the frequency occurrence"
+
+# Check: are all 2+ NA features peak-related?
+features_2plus_names <- names(na_summary1)
+all_peak <- all(grepl("peak", features_2plus_names))
+cat("All 2,304 features are peak-related:", all_peak, "\n")
+
+# Count peak vs non-peak
+num_peak <- sum(grepl("peak", features_2plus_names))
+num_non_peak <- length(features_2plus_names) - num_peak
+cat("Peak-related:", num_peak, "\n")
+cat("Non-peak-related:", num_non_peak, "\n")
+
+# Deleting all features that contain Na ----------------
+features_with_any_na <- names(na_summary[na_summary > 0])
+
+## keep features without any Na's
+features_clean <- x[, !colnames(x) %in% features_with_any_na]
+
+## verify cleaning worked
+cat("Features deleted:", length(features_with_any_na), "\n")
+cat("Features remaining:", ncol(features_clean) - 1, "\n")
+cat("Participants:", nrow(features_clean), "\n")
+cat("NAs remaining:", sum(is.na(features_clean)), "\n")
+
+saveRDS(features_clean, file = "features_clean.RDS")
