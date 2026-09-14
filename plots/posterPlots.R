@@ -25,8 +25,12 @@ fit      <- gam(norm_x ~ s(t, k = 70))
 smooth_x <- as.numeric(predict(fit, newdata = data.frame(t = t)))
 
 # Peak detection on smoothed signal
+mean_smooth <- mean(smooth_x)
+sd_smooth   <- sd(smooth_x)
+threshold   <- mean_smooth + sd_smooth
+
 peaks        <- findpeaks(smooth_x,
-                           minpeakheight   = mean(smooth_x) + sd(smooth_x),
+                           minpeakheight   = threshold,
                            minpeakdistance = 10)
 peak_indices <- peaks[, 2]
 
@@ -43,13 +47,24 @@ peak_df <- tibble(
   value = smooth_x[peak_indices[peak_indices %in% win]]
 )
 
-y_range <- range(c(plot_df$raw, plot_df$smooth))
+# Threshold lines (drawn instead of per-peak vertical guides): the mean of
+# the smoothed signal, and the mean + 1 SD cutoff actually used by findpeaks()
+# above to decide what counts as a peak.
+threshold_df <- tibble(
+  type  = factor(c("Mean", "Mean + 1 SD (peak threshold)"),
+                 levels = c("Mean", "Mean + 1 SD (peak threshold)")),
+  value = c(mean_smooth, threshold)
+)
 
-# Palette (dataviz skill default: categorical slot 1 blue, slot 2 orange,
-# status/critical red used as a highlight marker, not a series)
-col_raw    <- "#2a78d6"
-col_smooth <- "#eb6834"
-col_peak   <- "#d03b3b"
+y_range <- range(c(plot_df$raw, plot_df$smooth, threshold_df$value))
+
+# Poster palette: poppy, high-contrast red/blue for the two data series;
+# black for the peak markers so they read clearly against both.
+col_raw    <- "#0033ff"
+col_smooth <- "#e8112d"
+col_peak   <- "#111111"
+col_mean   <- "grey30"
+col_sd     <- "grey65"
 
 poster_theme <- theme_minimal(base_size = 20) +
   theme(
@@ -67,29 +82,35 @@ poster_theme <- theme_minimal(base_size = 20) +
 
 # Panel 1: raw signal only
 p1 <- ggplot(plot_df, aes(time, raw)) +
-  geom_line(color = col_raw, linewidth = 0.6) +
+  geom_line(color = col_raw, linewidth = 0.75) +
   coord_cartesian(ylim = y_range) +
   labs(title = "1. Raw EEG Signal", x = "Time (s)", y = "Amplitude (z-scored)") +
   poster_theme
 
-# Panel 2: raw + GAM smooth + detected peaks
+# Panel 2: raw + GAM smooth + mean / +1 SD threshold + detected peaks
 p2 <- ggplot(plot_df, aes(time, raw)) +
-  geom_line(aes(color = "Raw signal"), linewidth = 0.5, alpha = 0.55) +
+  geom_hline(data = subset(threshold_df, type == "Mean"),
+             aes(yintercept = value, color = type), linewidth = 0.8) +
+  geom_hline(data = subset(threshold_df, type == "Mean + 1 SD (peak threshold)"),
+             aes(yintercept = value, color = type), linewidth = 0.6,
+             linetype = "dashed", alpha = 0.8) +
+  geom_line(aes(color = "Raw signal"), linewidth = 0.8, alpha = 0.9) +
   geom_line(aes(time, smooth, color = "GAM smooth (k = 70)"), linewidth = 1.3) +
-  geom_vline(data = peak_df, aes(xintercept = time), linetype = "dashed",
-             color = "grey55", linewidth = 0.5) +
   geom_point(data = peak_df, aes(time, value, color = "Detected peak"), size = 4.5) +
   coord_cartesian(ylim = y_range) +
   scale_color_manual(values = c(
-    "Raw signal"          = col_raw,
-    "GAM smooth (k = 70)" = col_smooth,
-    "Detected peak"       = col_peak
-  ), breaks = c("Raw signal", "GAM smooth (k = 70)", "Detected peak")) +
+    "Raw signal"                    = col_raw,
+    "GAM smooth (k = 70)"           = col_smooth,
+    "Mean"                          = col_mean,
+    "Mean + 1 SD (peak threshold)"  = col_sd,
+    "Detected peak"                 = col_peak
+  ), breaks = c("Raw signal", "GAM smooth (k = 70)", "Mean",
+                "Mean + 1 SD (peak threshold)", "Detected peak")) +
   labs(title = "2. GAM Smoothing & Peak Detection", x = "Time (s)", y = "Amplitude (z-scored)") +
   guides(color = guide_legend(override.aes = list(
-    linetype  = c("solid", "solid", "blank"),
-    shape     = c(NA, NA, 16),
-    linewidth = c(1, 1.3, NA)
+    linetype  = c("solid", "solid", "solid", "dashed", "blank"),
+    shape     = c(NA, NA, NA, NA, 16),
+    linewidth = c(1, 1.3, 0.8, 0.6, NA)
   ))) +
   poster_theme
 
