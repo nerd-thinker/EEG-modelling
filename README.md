@@ -57,7 +57,7 @@ _Brain and Cognition_, 193, Article 106393. https://doi.org/10.1016/j.bandc.2025
 
 ## Acknowledgements
 
-With thanks to SPUR, the Hamilton Institute for financial support, and the Department
+With thanks to SPUR,Hamilton Institute for financial support, and the Department
 of Mathematics and Statistics for technical support; Department of Psychology for
-access to data. With thanks also to Rafael Moral, Sean Commins, and Conor Thornberry
+access to data. With thanks also to Rafael A. Moral, Sean Commins, and Conor Thornberry
 for mentorship and support throughout this project.
