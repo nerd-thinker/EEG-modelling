@@ -75,12 +75,23 @@ final_coefs <- final_coefs[final_coefs[, 1] != 0, , drop = FALSE]
 final_coefs
 
 # Check values. The final coef might be ballooned due to coefficient effect.
-# Also only 3 features???
+# Also only 3 features??? -> R rounding error?
 summary(features_clean$theta_T8_none_mean)
 summary(features_clean$theta_Fp2_none_mean)
 summary(features_clean$alpha_Fp2_log10_mean)
 # Because the scale is really small the ceoficient effect might have been enormours.
 # But the scaling of the mode, which is default in this case should have taken care of that?
+# Could it be that the values are so small that they automatically get rendered near zero?? 
+
+# Let's test if the mean is meaningful or rounding error:
+# R's machine precision, ~2.2e-16
+x_raw <- bands_clean$alpha$Fp1
+z <- as.numeric(scale(x_raw))
+
+mean(z)          # should already be ~1e-16 
+sd(z)            # should be exactly 1
+
+# now compare to what get_features_single reports for this same channel/scaling
 
 # Let's try only one scaling, z-score and train the model to see what features we are gonna get -------
 
@@ -93,3 +104,4 @@ z_score_data <- model_data %>%
   select(`O/Y`, matches("_z_score_"), starts_with("cross_"))
 
 dim(z_score_data)
+
